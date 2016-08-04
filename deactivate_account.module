@@ -1,0 +1,408 @@
+<?php
+
+/**
+ * @file
+ * Render an disable my account form  for authenticated users.
+ */
+
+/**
+ * Implements hook_permission().
+ */
+function deactivate_account_permission() {
+  return array(
+    'permission' => array(
+      'title' => t('disable my account'),
+      'description' => t('manage permissions'),
+    ),
+    'administer' => array(
+      'title' => t('Administer disable my account'),
+      'description' => t('manage permissions'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_menu().
+ */
+function deactivate_account_menu() {
+
+  if (variable_get('deactivate_account_tab')) {
+    $type = MENU_LOCAL_TASK;
+    $menu_link = 'user/%/deactivate';
+  }
+  else {
+    $type = MENU_CALLBACK;
+    $menu = variable_get('deactivate_account_path_container');
+    $menu_link = 'user/%/' . $menu['deactivate_account_path'];
+
+  }
+
+  $items[$menu_link] = array(
+    'title' => 'Deactivate',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('deactivate_account_form'),
+    'access arguments' => array('permission'),
+    'type' => $type,
+    'weight' => 10,
+  );
+  $items['admin/config/people/deactivate-account'] = array(
+    'title' => 'Deactivate Account',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('deactivate_account_config_form'),
+    'access arguments' => array('administer'),
+    'file' => 'deactivate_account.admin.inc',
+  );
+  return $items;
+}
+
+/**
+ * Disable my account form for authenticated users.
+ */
+function deactivate_account_form($form, &$form_state) {
+  global $user;
+  $form = array();
+  $time = array();
+  $deactivate_account_time_options = variable_get('deactivate_account_time_option');
+
+  for ($i = 0; $i < variable_get('deactivate_account_total_options'); $i++) {
+    $time[$deactivate_account_time_options['name']['deactivate_account_time_' . $i]] = $deactivate_account_time_options['name']['deactivate_account_time_' . $i] . ' hours';
+  }
+
+  $form['delete'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Delete Account'),
+    '#description' => t("Are you sure you want to PERMANENTLY DELETE your account?"),
+  );
+
+  $form['delete']['username'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Email or username'),
+    '#required' => TRUE,
+    '#default_value' => $user->name,
+  );
+
+  $form['delete']['password'] = array(
+    '#type' => 'password',
+    '#title' => t('Password'),
+    '#required' => TRUE,
+  );
+
+  $form['delete']['delete_submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('DELETE MY ACCOUNT'),
+    '#validate' => array('deactivate_account_form_validate'),
+    '#submit' => array('deactivate_account_delete'),
+
+  );
+
+  // And put the disable part in a separate frameset.
+  $form['disable'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Temporary deactivate account'),
+  );
+
+  $form['disable']['options'] = array(
+    '#type' => 'radios',
+    '#title' => t('How long you want to deactive your account?'),
+    '#options' => $time,
+  );
+
+  $form['disable']['disable_submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('OKAY'),
+    '#validate' => array('deactivate_account_form_validate'),
+    '#submit' => array('deactivate_account_deactivate'),
+  );
+
+  return $form;
+}
+
+/**
+ * Deleting user account on request.
+ */
+function deactivate_account_delete(&$form, &$form_State) {
+  global $user;
+  // Delete the account.
+  user_delete($user->uid);
+  // Set a message and send the user to the homepage.
+  drupal_set_message(t('Your account has been deleted'));
+  drupal_goto(variable_get('deactivate_account_redirect'));
+}
+
+/**
+ * Deactivating user.
+ */
+function deactivate_account_deactivate(&$form, &$form_state) {
+  global $user;
+  $time = time();
+  $expiration = $time + $form_state['values']['options'] * 60;
+  deactivate_account_deactivate_user($user, $expiration);
+}
+
+/**
+ * Deactivates the account and save it.
+ */
+function deactivate_account_deactivate_user($user, $expiration_time) {
+  $user_uid = $user->uid;
+  $user_name = $user->name;
+
+  db_insert('deactivate_account')
+    ->fields(array(
+      'uid' => $user_uid,
+      'name' => $user_name,
+      'expiration' => $expiration_time,
+    ))
+    ->execute();
+  $edit['status'] = 0;
+  user_save($user, $edit);
+  deactivate_account_disable_nodes($user);
+  deactivate_account_disable_comments($user);
+  drupal_goto(variable_get('deactivate_account_redirect '));
+}
+
+/**
+ * Disable the nodes of deactivated user.
+ */
+function deactivate_account_disable_nodes($user) {
+  if (variable_get('deactivate_account_nodes')) {
+    $nids = array();
+    $user_uid = $user->uid;
+    $node_ids = db_select('node', 'n')
+                ->fields('n', array('uid', 'nid'))
+                ->condition('uid', $user_uid)
+                ->condition('status', 1)
+                ->execute()
+                ->fetchAll();
+
+    foreach ($node_ids as $value) {
+      $nids[$value->nid] = $value->nid;
+    }
+
+    $nodes = node_load_multiple($nids);
+
+    foreach ($nodes as $node) {
+      $node->status = 0;
+      node_save($node);
+    }
+
+    db_update('deactivate_account')
+      ->fields(array(
+        'node_data' => serialize($nids),
+      ))
+      ->condition('uid', $user_uid)
+      ->execute();
+  }
+}
+
+/**
+ * Disable the comments of deactivated user.
+ */
+function deactivate_account_disable_comments($user) {
+
+  if (variable_get('deactivate_account_comments')) {
+    $user_uid = $user->uid;
+    $cids = array();
+    $comment_ids = db_select('comment', 'n')
+                   ->fields('n', array('cid', 'uid'))
+                   ->condition('uid', $user_uid)
+                   ->condition('status', 1)
+                   ->execute()
+                   ->fetchAll();
+
+    foreach ($comment_ids as $value) {
+      $cids[$value->cid] = $value->cid;
+    }
+
+    $comments = comment_load_multiple($cids);
+
+    foreach ($comments as $comment) {
+      $comment->status = 0;
+      comment_save($comment);
+    }
+
+    db_update('deactivate_account')
+        ->fields(array(
+          'comment_data' => serialize($cids),
+        ))
+        ->condition('uid', $user_uid)
+        ->execute();
+  }
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function deactivate_account_form_alter(&$form, &$form_state, $form_id) {
+
+  if ($form_id == 'user_login' || 'user_login_block') {
+    unset($form['#validate'][0]);
+    array_unshift($form['#validate'], 'deactivate_account_user_login_form_validate');
+    array_unshift($form['#submit'], 'deactivate_account_user_login_form_submit');
+  }
+
+  if ($form_id == 'deactivate_account_form') {
+    $form['#validate']  = array('deactivate_account_form_validate');
+  }
+}
+
+/**
+ * Check the details supply authenticate and match the user currently logged in.
+ */
+function deactivate_account_form_validate($form, &$form_state) {
+
+  global $user;
+
+  if ((user_authenticate($form_state['values']['username'], $form_state['values']['password']) == FALSE) || ($form_state['values']['username'] != $user->name)) {
+    form_set_error('name', t('That username and or password is not valid.'));
+  }
+}
+
+/**
+ * Validates the user's acount deactivation time is completed or not.
+ */
+function deactivate_account_user_login_form_validate(&$form, &$form_state) {
+
+  $form_state['enable_user'] = FALSE;
+
+  if (!empty($form_state['values']['name'])) {
+    $username = $form['name']['#value'];
+    $user_result = db_select('deactivate_account', 'disable')
+                   ->fields('disable', array('uid', 'expiration'))
+                   ->condition('name', $username)
+                   ->execute()
+                   ->fetchAssoc();
+    if (isset($user_result['expiration'])) {
+      if (REQUEST_TIME > $user_result['expiration']) {
+        $form_state['enable_user'] = TRUE;
+        $form_state['uid'] = $user_result['uid'];
+      }
+      else {
+        $time_diff = $user_result['expiration'] - REQUEST_TIME;
+        $time_in_hours = $time_diff / 3600;
+        $time_in_hours = round($time_in_hours, 0);
+        if ($time_in_hours > 1) {
+          $time_left = $time_in_hours . ' hours.';
+        }
+        elseif ($time_in_hours == 1) {
+          $time_left = $time_in_hours . ' hour.';
+        }
+        else {
+          $time_in_minuts = $time_diff % 3600;
+          $time_in_minuts = round(($time_in_minuts / 60), 0);
+          $time_left = $time_in_minuts . ' minutes.';
+        }
+        form_set_error('name', t('This account has been deactivated or is blocked. Please try login after @time', array('@time' => $time_left)));
+      }
+    }
+    else {
+      if (!empty($form_state['values']['name']) && user_is_blocked($form_state['values']['name'])) {
+        // Blocked in user administration.
+        form_set_error('name', t('The username %name has not been activated or is blocked.', array('%name' => $form_state['values']['name'])));
+      }
+    }
+  }
+}
+
+/**
+ * Activates user account other content if deactivation time is completed.
+ */
+function deactivate_account_user_login_form_submit($form, &$form_state) {
+
+  if ($form_state['enable_user']) {
+    $uid = $form_state['uid'];
+    deactivate_account_activate_user($uid);
+
+  }
+}
+
+/**
+ * Activates the user account and save it.
+ */
+function deactivate_account_activate_user($uid) {
+
+  $user = user_load($uid);
+  $user->status = 1;
+  user_save($user);
+  deactivate_account_enable_nodes($uid);
+  deactivate_account_enable_comments($uid);
+  deactivate_account_remove_user($uid);
+}
+
+/**
+ * Enables the published nodes of activated user.
+ */
+function deactivate_account_enable_nodes($uid) {
+  if (variable_get('deactivate_account_nodes')) {
+    $nids = array();
+    $node_ids = db_select('deactivate_account', 'c')
+                ->fields('c', array('node_data'))
+                ->condition('uid', $uid)
+                ->execute()
+                ->fetchAssoc();
+
+    $node_ids = unserialize($node_ids['node_data']);
+
+    if ($node_ids != NULL) {
+      foreach ($node_ids as $value) {
+        $nids[] = $value;
+      }
+      $nodes = node_load_multiple($nids);
+      foreach ($nodes as $node) {
+        $node->status = 1;
+        node_save($node);
+      }
+    }
+  }
+}
+
+/**
+ * Enables the published comments of activated user.
+ */
+function deactivate_account_enable_comments($uid) {
+  if (variable_get('deactivate_account_comments')) {
+    $cids = array();
+    $comment_ids = db_select('deactivate_account', 'c')
+                   ->fields('c', array('comment_data'))
+                   ->condition('uid', $uid)
+                   ->execute()
+                   ->fetchAssoc();
+
+    $comment_ids = unserialize($comment_ids['comment_data']);
+    if ($comment_ids != NULL) {
+      foreach ($comment_ids as $value) {
+        $cids[] = $value;
+      }
+      $comments = comment_load_multiple($cids);
+      foreach ($comments as $comment) {
+        $comment->status = 1;
+        comment_save($comment);
+      }
+    }
+  }
+}
+
+/**
+ * Remove user record from disable_my_account table after user is activated.
+ */
+function deactivate_account_remove_user($uid) {
+  db_delete('deactivate_account')
+      ->condition('uid', $uid)
+      ->execute();
+}
+
+/**
+ * Implements hook_cron().
+ */
+function deactivate_account_cron() {
+
+  $user_result = db_select('deactivate_account', 'c')
+                 ->fields('c')
+                 ->execute()
+                 ->fetchAll();
+
+  foreach ($user_result as $row) {
+    if ($row->expiration < REQUEST_TIME) {
+      deactivate_account_activate_user($row->uid);
+    }
+  }
+}
