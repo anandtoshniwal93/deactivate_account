@@ -1,16 +1,32 @@
-This module allows user to delete and deactivate there own account for temproray time period. The time period options will be provided by the admin. User can select one of those option and deactivate account for that particular time.
+DEACTIVATE ACCOUNT
+-------------------------------------------------------------------------------
+This module allows a user to delete his/her account or deactivate it
+temporarily. A user can choose the time period option for which the account
+will stay deactivated. These options are configurable. The account will stay
+inactive for the selected time period.
 
-Admin can configure the module by following ways :
+DEPENDENCIES
+-------------------------------------------------------------------------------
+None.
 
-1 By providing different time period options to deactivate account.
+INSTALLATION AND CONFIGURATION
+-------------------------------------------------------------------------------
+1. Download the module and place it with other contributed modules
+   (e.g. sites/all/modules/contrib).
+2. Enable it from Modules list page.
+3. Modify permissions on the People >> Permissions page.
+4. Go to admin/config/people/deactivate-account, and set the time period
+   options. These options will be presented to the user, after (s)he selects to
+   deactivate the account.
 
-2 Admin can choose whether to keep deactivation form as link or local tab under profile.
-
-3 If admin choose to keep it as link then admin can specify url for the deactivation form.
-
-4 Admin can disable all the comments of deactivated user.
-
-5 Admin can disable all the nodes of deactived user.
-
-6 Admin also can set the redirect url so user can be navigated to proper page after deactivating or deleting an
-  account.
+FEATURES
+-------------------------------------------------------------------------------
+1. Configurable time period options for which user account can be deactivated.
+2. Setting to either keep/disable the content (nodes, comments) after the
+   account has been deactivated.
+3. The "Deactivate account form" can either be shown at a normal menu link or a
+   local tab under user profile. This option is configurable.
+4. A menu path has to be provided if the "Deactivate account form" is set to be
+   displayed as per menu.
+5. The user can be redirected to a configurable path after the account is
+   deactivated or or deleted.
