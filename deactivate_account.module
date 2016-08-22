@@ -144,7 +144,7 @@ function deactivate_account_delete(&$form, &$form_State) {
 function deactivate_account_deactivate(&$form, &$form_state) {
   global $user;
   $time = time();
-  $expiration = $time + $form_state['values']['options'] * 60;
+  $expiration = $time + $form_state['values']['options'] * 60 * 60;
   deactivate_account_deactivate_user($user, $expiration);
 }
 
