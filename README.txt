@@ -29,4 +29,4 @@ FEATURES
 4. A menu path has to be provided if the "Deactivate account form" is set to be
    displayed as per menu.
 5. The user can be redirected to a configurable path after the account is
-   deactivated or or deleted.
+   deactivated or deleted.

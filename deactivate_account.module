@@ -6,17 +6,26 @@
  */
 
 /**
+ * Implements hook_help().
+ */
+function deactivate_account_help($path, $arg) {
+  switch ($path) {
+    case 'admin/help#deactivate_account':
+      return '<p>' . t('This module allows a user to delete his/her account or deactivate it
+temporarily. A user can choose the time period option for which the account
+will stay deactivated. These options are configurable. The account will stay
+inactive for the selected time period.') . '<p>';
+  }
+}
+
+/**
  * Implements hook_permission().
  */
 function deactivate_account_permission() {
   return array(
-    'permission' => array(
-      'title' => t('disable my account'),
-      'description' => t('manage permissions'),
-    ),
-    'administer' => array(
-      'title' => t('Administer disable my account'),
-      'description' => t('manage permissions'),
+    'administer deactivate account' => array(
+      'title' => t('Administer deactivate account'),
+      'description' => t('Perform administration task for deactivate account module.'),
     ),
   );
 }
@@ -33,7 +42,7 @@ function deactivate_account_menu() {
   else {
     $type = MENU_CALLBACK;
     $menu = variable_get('deactivate_account_path_container');
-    $menu_link = 'user/%/' . $menu['deactivate_account_path'];
+    $menu_link = 'user/' . $menu['deactivate_account_path'];
 
   }
 
@@ -41,7 +50,7 @@ function deactivate_account_menu() {
     'title' => 'Deactivate',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('deactivate_account_form'),
-    'access arguments' => array('permission'),
+    'access callback' => 'user_is_logged_in',
     'type' => $type,
     'weight' => 10,
   );
@@ -233,8 +242,7 @@ function deactivate_account_disable_comments($user) {
  * Implements hook_form_alter().
  */
 function deactivate_account_form_alter(&$form, &$form_state, $form_id) {
-
-  if ($form_id == 'user_login' || 'user_login_block') {
+  if ($form_id == 'user_login' || $form_id == 'user_login_block') {
     unset($form['#validate'][0]);
     array_unshift($form['#validate'], 'deactivate_account_user_login_form_validate');
     array_unshift($form['#submit'], 'deactivate_account_user_login_form_submit');
@@ -263,7 +271,6 @@ function deactivate_account_form_validate($form, &$form_state) {
 function deactivate_account_user_login_form_validate(&$form, &$form_state) {
 
   $form_state['enable_user'] = FALSE;
-
   if (!empty($form_state['values']['name'])) {
     $username = $form['name']['#value'];
     $user_result = db_select('deactivate_account', 'disable')

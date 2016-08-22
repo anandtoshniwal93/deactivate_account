@@ -1,1 +1,3 @@
 name = Deactivate Account
+description = This module allows a user to delete his/her account or deactivate it temporarily.
+core = 7.x

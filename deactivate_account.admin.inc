@@ -91,15 +91,14 @@ function deactivate_account_config_form($form, &$form_state) {
   );
 
   $menu = variable_get('deactivate_account_path_container');
-
   $form['deactivate_account_path_container']['deactivate_account_path'] = array(
     '#type' => 'textfield',
     '#title' => t('Deactivate form link'),
     '#description' => t('deactivate form link @base_url/user/', array('@base_url' => $GLOBALS['base_url'])),
-    '#required' => TRUE,
     '#default_value' => $menu['deactivate_account_path'],
     '#prefix' => '',
     '#suffix' => '',
+    '#validate' => array('deactivate_account_config_form_validate'),
   );
 
   $form['deactivate_account_redirect'] = array(
@@ -119,6 +118,7 @@ function deactivate_account_config_form($form, &$form_state) {
  * Clears all cache.
  */
 function deactivate_account_clear_cache($form, &$form_state) {
+
   drupal_flush_all_caches();
 }
 
@@ -149,4 +149,14 @@ function deactivate_account_remove_one_option($form, &$form_state) {
     variable_set('deactivate_account_total_options', $time_options);
   }
   $form_state['rebuild'] = TRUE;
+}
+
+/**
+ * Function to check wheather deactivate form link field is required or not.
+ */
+function deactivate_account_config_form_validate($form, &$form_state) {
+
+  if ($form_state['values']['deactivate_account_tab'] == 0 && empty(trim($form_state['values']['deactivate_account_path_container']['deactivate_account_path']))) {
+    form_set_error('deactivate_account_tab', t('Deactivate form link field is required'));
+  }
 }
