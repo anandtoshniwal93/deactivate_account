@@ -13,12 +13,13 @@ function deactivate_account_config_form($form, &$form_state) {
   $form['#tree'] = TRUE;
   $deactivate_account_total_options = variable_get('deactivate_account_total_options');
   if (empty($deactivate_account_total_options)) {
-    $deactivate_account_total_options = 1;
+    $deactivate_account_total_options = 0;
   }
 
   $form['deactivate_account_time_option'] = array(
     '#type' => 'fieldset',
     '#title' => t('Time options to deactivate account'),
+    '#description' => t('If no time option is provided then temporary deactivate form will not be shown to user.'),
     // Set up the wrapper so that AJAX will be able to replace the fieldset.
     '#prefix' => '<div id="names-fieldset-wrapper">',
     '#suffix' => '</div>',
@@ -26,10 +27,11 @@ function deactivate_account_config_form($form, &$form_state) {
   // Build the fieldset with the proper number of time options.
   // variable $total_options determine the number of textfields to build.
   $test = variable_get('deactivate_account_time_option');
-  for ($i = 0; $i < $deactivate_account_total_options; $i++) {
+  for ($i = 0; $i <= $deactivate_account_total_options; $i++) {
     $form['deactivate_account_time_option']['name']['deactivate_account_time_' . $i] = array(
       '#type' => 'textfield',
       '#title' => t('Time'),
+      '#description' => t('Enter only number and unit is hour.'),
       '#default_value' => $test['name']['deactivate_account_time_' . $i],
     );
   }
@@ -61,8 +63,7 @@ function deactivate_account_config_form($form, &$form_state) {
     '#type' => 'checkbox',
     '#title' => t('Disable all comments of deactivated user.'),
     '#description' => t('If checked then all the comments posted by the user will be hidden till the time period account gets active.'),
-    '#default_value' => variable_get('deactivate_account_comments'),
-
+    '#default_value' => variable_get('deactivate_account_comments', ''),
   );
 
   // Checkbox for disabling decativated user comments.
@@ -70,7 +71,7 @@ function deactivate_account_config_form($form, &$form_state) {
     '#type' => 'checkbox',
     '#title' => t('Disable all nodes of deactivated user.'),
     '#description' => t('If checked then all the nodes published by the user will be hidden till the time period account gets active.'),
-    '#default_value' => variable_get('deactivate_account_nodes'),
+    '#default_value' => variable_get('deactivate_account_nodes', ''),
   );
 
   // Checkbox for making local tab on user page or link.
@@ -78,7 +79,7 @@ function deactivate_account_config_form($form, &$form_state) {
     '#type' => 'checkbox',
     '#title' => t('Create tab on user page'),
     '#description' => t('If checked then deactivation form will be built under user profile as local tab else it will be menu link as specified by the admin.'),
-    '#default_value' => variable_get('deactivate_account_tab'),
+    '#default_value' => variable_get('deactivate_account_tab', 1),
   );
 
   $form['deactivate_account_path_container'] = array(
@@ -106,9 +107,9 @@ function deactivate_account_config_form($form, &$form_state) {
     '#title' => t('Redirect path'),
     '#description' => t('user to entered path after deactivating account @base_url/', array('@base_url' => $GLOBALS['base_url'])),
     '#required' => TRUE,
-    '#default_value' => variable_get('deactivate_account_redirect'),
+    '#default_value' => variable_get('deactivate_account_redirect', '<front>'),
   );
-
+  $form['#submit'][] = 'deactivate_account_validate_blank_options';
   $form = system_settings_form($form);
   $form['#submit'][] = 'deactivate_account_clear_cache';
   return $form;
@@ -117,8 +118,7 @@ function deactivate_account_config_form($form, &$form_state) {
 /**
  * Clears all cache.
  */
-function deactivate_account_clear_cache($form, &$form_state) {
-
+function deactivate_account_clear_cache($form, &$form_state){
   drupal_flush_all_caches();
 }
 
@@ -159,4 +159,30 @@ function deactivate_account_config_form_validate($form, &$form_state) {
   if ($form_state['values']['deactivate_account_tab'] == 0 && empty(trim($form_state['values']['deactivate_account_path_container']['deactivate_account_path']))) {
     form_set_error('deactivate_account_tab', t('Deactivate form link field is required'));
   }
+  for($i=0;$i<=variable_get('deactivate_account_total_options');$i++){
+    if($form_state['values']['deactivate_account_time_option']['name']['deactivate_account_time_' . $i] == "0"){
+      form_set_error('deactivate_account_time_option', t('Invalid time option 0'));
+    }
+  }
 }
+
+/**
+ * Function to validate blank time option fields.
+ */
+function deactivate_account_validate_blank_options($form,&$form_state){
+  $time_options = variable_get('deactivate_account_total_options');
+  $time_period = variable_get('deactivate_account_time_option');
+  $blank_time_options =0;
+  for($i=0;$i<=$time_options;$i++){
+    if($form_state['values']['deactivate_account_time_option']['name']['deactivate_account_time_' . $i] == ""){
+      $blank_time_options++;
+    }
+
+  }
+  $time_options = $time_options - $blank_time_options;
+  if($time_options < 0){
+    $time_options =0;
+  }
+  variable_set('deactivate_account_total_options', $time_options);
+}
+

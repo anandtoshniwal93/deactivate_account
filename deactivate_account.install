@@ -57,5 +57,6 @@ function deactivate_account_uninstall() {
   variable_del('deactivate_account_nodes');
   variable_del('deactivate_account_total_options');
   variable_del('deactivate_account_tab');
-  variable_del('deactivate_account_path_containser');
+  variable_del('deactivate_account_path_container');
+  variable_del('deactivate_account_redirect');
 }

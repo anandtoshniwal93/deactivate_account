@@ -73,7 +73,7 @@ function deactivate_account_form($form, &$form_state) {
   $time = array();
   $deactivate_account_time_options = variable_get('deactivate_account_time_option');
 
-  for ($i = 0; $i < variable_get('deactivate_account_total_options'); $i++) {
+  for ($i = 0; $i <= variable_get('deactivate_account_total_options'); $i++) {
     $time[$deactivate_account_time_options['name']['deactivate_account_time_' . $i]] = $deactivate_account_time_options['name']['deactivate_account_time_' . $i] . ' hours';
   }
 
@@ -104,25 +104,26 @@ function deactivate_account_form($form, &$form_state) {
 
   );
 
-  // And put the disable part in a separate frameset.
-  $form['disable'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Temporary deactivate account'),
-  );
+  // And put the deactivate part in a separate frameset.
+  if($deactivate_account_time_options['name']['deactivate_account_time_0'] != ""){
+    $form['disable'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Temporary deactivate account'),
+    );
 
-  $form['disable']['options'] = array(
-    '#type' => 'radios',
-    '#title' => t('How long you want to deactive your account?'),
-    '#options' => $time,
-  );
+    $form['disable']['options'] = array(
+      '#type' => 'radios',
+      '#title' => t('How long you want to deactive your account?'),
+      '#options' => $time,
+    );
 
-  $form['disable']['disable_submit'] = array(
-    '#type' => 'submit',
-    '#value' => t('OKAY'),
-    '#validate' => array('deactivate_account_form_validate'),
-    '#submit' => array('deactivate_account_deactivate'),
-  );
-
+    $form['disable']['disable_submit'] = array(
+      '#type' => 'submit',
+      '#value' => t('OKAY'),
+      '#validate' => array('deactivate_account_form_validate'),
+      '#submit' => array('deactivate_account_deactivate'),
+    );
+  }
   return $form;
 }
 
