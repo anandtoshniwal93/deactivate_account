@@ -118,7 +118,7 @@ function deactivate_account_config_form($form, &$form_state) {
 /**
  * Clears all cache.
  */
-function deactivate_account_clear_cache($form, &$form_state){
+function deactivate_account_clear_cache($form, &$form_state) {
   drupal_flush_all_caches();
 }
 
@@ -159,8 +159,8 @@ function deactivate_account_config_form_validate($form, &$form_state) {
   if ($form_state['values']['deactivate_account_tab'] == 0 && empty(trim($form_state['values']['deactivate_account_path_container']['deactivate_account_path']))) {
     form_set_error('deactivate_account_tab', t('Deactivate form link field is required'));
   }
-  for($i=0;$i<=variable_get('deactivate_account_total_options');$i++){
-    if($form_state['values']['deactivate_account_time_option']['name']['deactivate_account_time_' . $i] == "0"){
+  for ($i = 0; $i <= variable_get('deactivate_account_total_options'); $i++) {
+    if ($form_state['values']['deactivate_account_time_option']['name']['deactivate_account_time_' . $i] == "0") {
       form_set_error('deactivate_account_time_option', t('Invalid time option 0'));
     }
   }
@@ -169,20 +169,19 @@ function deactivate_account_config_form_validate($form, &$form_state) {
 /**
  * Function to validate blank time option fields.
  */
-function deactivate_account_validate_blank_options($form,&$form_state){
+function deactivate_account_validate_blank_options($form, &$form_state) {
   $time_options = variable_get('deactivate_account_total_options');
   $time_period = variable_get('deactivate_account_time_option');
-  $blank_time_options =0;
-  for($i=0;$i<=$time_options;$i++){
-    if($form_state['values']['deactivate_account_time_option']['name']['deactivate_account_time_' . $i] == ""){
+  $blank_time_options = 0;
+  for ($i = 0; $i <= $time_options; $i++) {
+    if ($form_state['values']['deactivate_account_time_option']['name']['deactivate_account_time_' . $i] == "") {
       $blank_time_options++;
     }
 
   }
   $time_options = $time_options - $blank_time_options;
-  if($time_options < 0){
-    $time_options =0;
+  if ($time_options < 0) {
+    $time_options = 0;
   }
   variable_set('deactivate_account_total_options', $time_options);
 }
-

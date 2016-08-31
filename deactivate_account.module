@@ -105,7 +105,7 @@ function deactivate_account_form($form, &$form_state) {
   );
 
   // And put the deactivate part in a separate frameset.
-  if($deactivate_account_time_options['name']['deactivate_account_time_0'] != ""){
+  if ($deactivate_account_time_options['name']['deactivate_account_time_0'] != "") {
     $form['disable'] = array(
       '#type' => 'fieldset',
       '#title' => t('Temporary deactivate account'),
