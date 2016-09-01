@@ -6,36 +6,11 @@
  */
 
 /**
- * Implements hook_help().
- */
-function deactivate_account_help($path, $arg) {
-  switch ($path) {
-    case 'admin/help#deactivate_account':
-      return '<p>' . t('This module allows a user to delete his/her account or deactivate it
-temporarily. A user can choose the time period option for which the account
-will stay deactivated. These options are configurable. The account will stay
-inactive for the selected time period.') . '<p>';
-  }
-}
-
-/**
- * Implements hook_permission().
- */
-function deactivate_account_permission() {
-  return array(
-    'administer deactivate account' => array(
-      'title' => t('Administer deactivate account'),
-      'description' => t('Perform administration task for deactivate account module.'),
-    ),
-  );
-}
-
-/**
  * Implements hook_menu().
  */
 function deactivate_account_menu() {
 
-  if (variable_get('deactivate_account_tab')) {
+  if (variable_get('deactivate_account_tab') || variable_get('deactivate_account_tab') == NULL) {
     $type = MENU_LOCAL_TASK;
     $menu_link = 'user/%/deactivate';
   }
@@ -56,12 +31,38 @@ function deactivate_account_menu() {
   );
   $items['admin/config/people/deactivate-account'] = array(
     'title' => 'Deactivate Account',
+    'description' => 'Manage time options and other actions for deactivated account. ',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('deactivate_account_config_form'),
     'access arguments' => array('administer'),
     'file' => 'deactivate_account.admin.inc',
   );
   return $items;
+}
+
+/**
+ * Implements hook_help().
+ */
+function deactivate_account_help($path, $arg) {
+  switch ($path) {
+    case 'admin/help#deactivate_account':
+      return '<p>' . t('This module allows a user to delete his/her account or deactivate it
+temporarily. A user can choose the time period option for which the account
+will stay deactivated. These options are configurable. The account will stay
+inactive for the selected time period.') . '</p>';
+  }
+}
+
+/**
+ * Implements hook_permission().
+ */
+function deactivate_account_permission() {
+  return array(
+    'administer deactivate account' => array(
+      'title' => t('Administer deactivate account'),
+      'description' => t('Perform administration task for deactivate account module.'),
+    ),
+  );
 }
 
 /**
@@ -274,38 +275,46 @@ function deactivate_account_user_login_form_validate(&$form, &$form_state) {
   $form_state['enable_user'] = FALSE;
   if (!empty($form_state['values']['name'])) {
     $username = $form['name']['#value'];
-    $user_result = db_select('deactivate_account', 'disable')
-                   ->fields('disable', array('uid', 'expiration'))
+    $user_status = db_select('users', 'u')
+                   ->fields('u', array('status'))
                    ->condition('name', $username)
                    ->execute()
                    ->fetchAssoc();
-    if (isset($user_result['expiration'])) {
-      if (REQUEST_TIME > $user_result['expiration']) {
-        $form_state['enable_user'] = TRUE;
-        $form_state['uid'] = $user_result['uid'];
-      }
-      else {
-        $time_diff = $user_result['expiration'] - REQUEST_TIME;
-        $time_in_hours = $time_diff / 3600;
-        $time_in_hours = round($time_in_hours, 0);
-        if ($time_in_hours > 1) {
-          $time_left = $time_in_hours . ' hours.';
-        }
-        elseif ($time_in_hours == 1) {
-          $time_left = $time_in_hours . ' hour.';
+
+    if ($user_status['status'] != 1) {
+      $user_result = db_select('deactivate_account', 'disable')
+                     ->fields('disable', array('uid', 'expiration'))
+                     ->condition('name', $username)
+                     ->execute()
+                     ->fetchAssoc();
+      if (isset($user_result['expiration'])) {
+        if (REQUEST_TIME > $user_result['expiration']) {
+          $form_state['enable_user'] = TRUE;
+          $form_state['uid'] = $user_result['uid'];
         }
         else {
-          $time_in_minuts = $time_diff % 3600;
-          $time_in_minuts = round(($time_in_minuts / 60), 0);
-          $time_left = $time_in_minuts . ' minutes.';
+          $time_diff = $user_result['expiration'] - REQUEST_TIME;
+          $time_in_hours = $time_diff / 3600;
+          $time_in_hours = round($time_in_hours, 0);
+          if ($time_in_hours > 1) {
+            $time_left = $time_in_hours . ' hours.';
+          }
+          elseif ($time_in_hours == 1) {
+            $time_left = $time_in_hours . ' hour.';
+          }
+          else {
+            $time_in_minuts = $time_diff % 3600;
+            $time_in_minuts = round(($time_in_minuts / 60), 0);
+            $time_left = $time_in_minuts . ' minutes.';
+          }
+          form_set_error('name', t('This account has been deactivated or is blocked. Please try login after @time', array('@time' => $time_left)));
         }
-        form_set_error('name', t('This account has been deactivated or is blocked. Please try login after @time', array('@time' => $time_left)));
       }
-    }
-    else {
-      if (!empty($form_state['values']['name']) && user_is_blocked($form_state['values']['name'])) {
-        // Blocked in user administration.
-        form_set_error('name', t('The username %name has not been activated or is blocked.', array('%name' => $form_state['values']['name'])));
+      else {
+        if (!empty($form_state['values']['name']) && user_is_blocked($form_state['values']['name'])) {
+          // Blocked in user administration.
+          form_set_error('name', t('The username %name has not been activated or is blocked.', array('%name' => $form_state['values']['name'])));
+        }
       }
     }
   }
@@ -402,7 +411,6 @@ function deactivate_account_remove_user($uid) {
  * Implements hook_cron().
  */
 function deactivate_account_cron() {
-
   $user_result = db_select('deactivate_account', 'c')
                  ->fields('c')
                  ->execute()
