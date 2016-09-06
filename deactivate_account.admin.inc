@@ -163,6 +163,9 @@ function deactivate_account_config_form_validate($form, &$form_state) {
     if ($form_state['values']['deactivate_account_time_option']['name']['deactivate_account_time_' . $i] == "0") {
       form_set_error('deactivate_account_time_option', t('Invalid time option 0'));
     }
+    elseif (!is_numeric($form_state['values']['deactivate_account_time_option']['name']['deactivate_account_time_' . $i])) {
+      form_set_error('deactivate_account_time_option', t('Time period must be numeric'));
+    }
   }
 }
 
@@ -171,13 +174,11 @@ function deactivate_account_config_form_validate($form, &$form_state) {
  */
 function deactivate_account_validate_blank_options($form, &$form_state) {
   $time_options = variable_get('deactivate_account_total_options');
-  $time_period = variable_get('deactivate_account_time_option');
   $blank_time_options = 0;
   for ($i = 0; $i <= $time_options; $i++) {
     if ($form_state['values']['deactivate_account_time_option']['name']['deactivate_account_time_' . $i] == "") {
       $blank_time_options++;
     }
-
   }
   $time_options = $time_options - $blank_time_options;
   if ($time_options < 0) {

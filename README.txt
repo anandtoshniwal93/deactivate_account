@@ -30,3 +30,15 @@ FEATURES
    displayed as per menu.
 5. The user can be redirected to a configurable path after the account is
    deactivated or deleted.
+
+FAQ
+-------------------------------------------------------------------------------
+Q: Can admin deactivate account of any other user?
+
+A: No, this module enables admin to set different time period options. from
+   which a user can choose the time period option for which the account
+   will stay deactivated.
+
+MAINTAINERS
+-------------------------------------------------------------------------------
+Anand Toshniwal (anand.toshniwal93) - https://www.drupal.org/u/anandtoshniwal93

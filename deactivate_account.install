@@ -34,7 +34,6 @@ function deactivate_account_schema() {
         'description' => 'Keeps the track of published nodes',
         'type' => 'blob',
         'not null' => FALSE,
-
       ),
       'comment_data' => array(
         'description' => 'Keeps the track of published comments',
