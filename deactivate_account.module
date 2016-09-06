@@ -179,11 +179,11 @@ function deactivate_account_disable_nodes($user) {
     $nids = array();
     $user_uid = $user->uid;
     $node_ids = db_select('node', 'n')
-                ->fields('n', array('uid', 'nid'))
-                ->condition('uid', $user_uid)
-                ->condition('status', 1)
-                ->execute()
-                ->fetchAll();
+      ->fields('n', array('uid', 'nid'))
+      ->condition('uid', $user_uid)
+      ->condition('status', 1)
+      ->execute()
+      ->fetchAll();
 
     foreach ($node_ids as $value) {
       $nids[$value->nid] = $value->nid;
@@ -214,11 +214,11 @@ function deactivate_account_disable_comments($user) {
     $user_uid = $user->uid;
     $cids = array();
     $comment_ids = db_select('comment', 'n')
-                   ->fields('n', array('cid', 'uid'))
-                   ->condition('uid', $user_uid)
-                   ->condition('status', 1)
-                   ->execute()
-                   ->fetchAll();
+     ->fields('n', array('cid', 'uid'))
+     ->condition('uid', $user_uid)
+     ->condition('status', 1)
+     ->execute()
+     ->fetchAll();
 
     foreach ($comment_ids as $value) {
       $cids[$value->cid] = $value->cid;
@@ -276,17 +276,17 @@ function deactivate_account_user_login_form_validate(&$form, &$form_state) {
   if (!empty($form_state['values']['name'])) {
     $username = $form['name']['#value'];
     $user_status = db_select('users', 'u')
-                   ->fields('u', array('status'))
-                   ->condition('name', $username)
-                   ->execute()
-                   ->fetchAssoc();
+      ->fields('u', array('status'))
+      ->condition('name', $username)
+      ->execute()
+      ->fetchAssoc();
 
     if ($user_status['status'] != 1) {
       $user_result = db_select('deactivate_account', 'disable')
-                     ->fields('disable', array('uid', 'expiration'))
-                     ->condition('name', $username)
-                     ->execute()
-                     ->fetchAssoc();
+       ->fields('disable', array('uid', 'expiration'))
+       ->condition('name', $username)
+       ->execute()
+       ->fetchAssoc();
       if (isset($user_result['expiration'])) {
         if (REQUEST_TIME > $user_result['expiration']) {
           $form_state['enable_user'] = TRUE;
@@ -352,10 +352,10 @@ function deactivate_account_enable_nodes($uid) {
   if (variable_get('deactivate_account_nodes')) {
     $nids = array();
     $node_ids = db_select('deactivate_account', 'c')
-                ->fields('c', array('node_data'))
-                ->condition('uid', $uid)
-                ->execute()
-                ->fetchAssoc();
+      ->fields('c', array('node_data'))
+      ->condition('uid', $uid)
+      ->execute()
+      ->fetchAssoc();
 
     $node_ids = unserialize($node_ids['node_data']);
 
@@ -379,10 +379,10 @@ function deactivate_account_enable_comments($uid) {
   if (variable_get('deactivate_account_comments')) {
     $cids = array();
     $comment_ids = db_select('deactivate_account', 'c')
-                   ->fields('c', array('comment_data'))
-                   ->condition('uid', $uid)
-                   ->execute()
-                   ->fetchAssoc();
+      ->fields('c', array('comment_data'))
+      ->condition('uid', $uid)
+      ->execute()
+      ->fetchAssoc();
 
     $comment_ids = unserialize($comment_ids['comment_data']);
     if ($comment_ids != NULL) {
@@ -403,8 +403,8 @@ function deactivate_account_enable_comments($uid) {
  */
 function deactivate_account_remove_user($uid) {
   db_delete('deactivate_account')
-      ->condition('uid', $uid)
-      ->execute();
+    ->condition('uid', $uid)
+    ->execute();
 }
 
 /**
@@ -412,9 +412,9 @@ function deactivate_account_remove_user($uid) {
  */
 function deactivate_account_cron() {
   $user_result = db_select('deactivate_account', 'c')
-                 ->fields('c')
-                 ->execute()
-                 ->fetchAll();
+   ->fields('c')
+   ->execute()
+   ->fetchAll();
 
   foreach ($user_result as $row) {
     if ($row->expiration < REQUEST_TIME) {
