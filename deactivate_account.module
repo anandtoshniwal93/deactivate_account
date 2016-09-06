@@ -214,11 +214,11 @@ function deactivate_account_disable_comments($user) {
     $user_uid = $user->uid;
     $cids = array();
     $comment_ids = db_select('comment', 'n')
-     ->fields('n', array('cid', 'uid'))
-     ->condition('uid', $user_uid)
-     ->condition('status', 1)
-     ->execute()
-     ->fetchAll();
+      ->fields('n', array('cid', 'uid'))
+      ->condition('uid', $user_uid)
+      ->condition('status', 1)
+      ->execute()
+      ->fetchAll();
 
     foreach ($comment_ids as $value) {
       $cids[$value->cid] = $value->cid;
@@ -232,11 +232,11 @@ function deactivate_account_disable_comments($user) {
     }
 
     db_update('deactivate_account')
-        ->fields(array(
-          'comment_data' => serialize($cids),
-        ))
-        ->condition('uid', $user_uid)
-        ->execute();
+      ->fields(array(
+        'comment_data' => serialize($cids),
+      ))
+      ->condition('uid', $user_uid)
+      ->execute();
   }
 }
 
@@ -283,10 +283,10 @@ function deactivate_account_user_login_form_validate(&$form, &$form_state) {
 
     if ($user_status['status'] != 1) {
       $user_result = db_select('deactivate_account', 'disable')
-       ->fields('disable', array('uid', 'expiration'))
-       ->condition('name', $username)
-       ->execute()
-       ->fetchAssoc();
+        ->fields('disable', array('uid', 'expiration'))
+        ->condition('name', $username)
+        ->execute()
+        ->fetchAssoc();
       if (isset($user_result['expiration'])) {
         if (REQUEST_TIME > $user_result['expiration']) {
           $form_state['enable_user'] = TRUE;
@@ -412,9 +412,9 @@ function deactivate_account_remove_user($uid) {
  */
 function deactivate_account_cron() {
   $user_result = db_select('deactivate_account', 'c')
-   ->fields('c')
-   ->execute()
-   ->fetchAll();
+    ->fields('c')
+    ->execute()
+    ->fetchAll();
 
   foreach ($user_result as $row) {
     if ($row->expiration < REQUEST_TIME) {
