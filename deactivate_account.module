@@ -162,10 +162,10 @@ function deactivate_account_deactivate_user($user, $expiration_time) {
   $user_uid = $user->uid;
   $user_name = $user->name;
   $user_exist = db_select('deactivate_account', 'n')
-      ->fields('n', array('uid'))
-      ->condition('uid', $user_uid)
-      ->execute()
-      ->rowCount();
+    ->fields('n', array('uid'))
+    ->condition('uid', $user_uid)
+    ->execute()
+    ->rowCount();
   if ($user_exist) {
     db_update('deactivate_account')
       ->fields(array(
