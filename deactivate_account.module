@@ -75,7 +75,12 @@ function deactivate_account_form($form, &$form_state) {
   $deactivate_account_time_options = variable_get('deactivate_account_time_option');
 
   for ($i = 0; $i <= variable_get('deactivate_account_total_options'); $i++) {
-    $time[$deactivate_account_time_options['name']['deactivate_account_time_' . $i]] = $deactivate_account_time_options['name']['deactivate_account_time_' . $i] . ' hours';
+    if ($deactivate_account_time_options['name']['deactivate_account_time_' . $i] == 1) {
+      $time[$deactivate_account_time_options['name']['deactivate_account_time_' . $i]] = $deactivate_account_time_options['name']['deactivate_account_time_' . $i] . ' hour';
+    }
+    else {
+      $time[$deactivate_account_time_options['name']['deactivate_account_time_' . $i]] = $deactivate_account_time_options['name']['deactivate_account_time_' . $i] . ' hours';
+    }
   }
 
   $form['delete'] = array(
@@ -156,19 +161,38 @@ function deactivate_account_deactivate(&$form, &$form_state) {
 function deactivate_account_deactivate_user($user, $expiration_time) {
   $user_uid = $user->uid;
   $user_name = $user->name;
-
-  db_insert('deactivate_account')
-    ->fields(array(
-      'uid' => $user_uid,
-      'name' => $user_name,
-      'expiration' => $expiration_time,
-    ))
-    ->execute();
-  $edit['status'] = 0;
-  user_save($user, $edit);
-  deactivate_account_disable_nodes($user);
-  deactivate_account_disable_comments($user);
-  drupal_goto(variable_get('deactivate_account_redirect '));
+  $user_exist = db_select('deactivate_account', 'n')
+      ->fields('n', array('uid'))
+      ->condition('uid', $user_uid)
+      ->execute()
+      ->rowCount();
+  if ($user_exist) {
+    db_update('deactivate_account')
+      ->fields(array(
+        'expiration' => $expiration_time,
+      ))
+      ->condition('uid', $user_uid)
+      ->execute();
+    $edit['status'] = 0;
+    user_save($user, $edit);
+    deactivate_account_disable_nodes($user);
+    deactivate_account_disable_comments($user);
+    drupal_goto(variable_get('deactivate_account_redirect '));
+  }
+  else {
+    db_insert('deactivate_account')
+      ->fields(array(
+        'uid' => $user_uid,
+        'name' => $user_name,
+        'expiration' => $expiration_time,
+      ))
+      ->execute();
+    $edit['status'] = 0;
+    user_save($user, $edit);
+    deactivate_account_disable_nodes($user);
+    deactivate_account_disable_comments($user);
+    drupal_goto(variable_get('deactivate_account_redirect '));
+  }
 }
 
 /**
@@ -294,20 +318,30 @@ function deactivate_account_user_login_form_validate(&$form, &$form_state) {
         }
         else {
           $time_diff = $user_result['expiration'] - REQUEST_TIME;
-          $time_in_hours = $time_diff / 3600;
-          $time_in_hours = round($time_in_hours, 0);
+          $time_in_hours = (int) ($time_diff / 3600);
+          $time_in_minutes = (int) (($time_diff % 3600) / 60);
           if ($time_in_hours > 1) {
-            $time_left = $time_in_hours . ' hours.';
+            $time_left = $time_in_hours . ' hours ' . $time_in_minutes . ' minutes.';
           }
           elseif ($time_in_hours == 1) {
-            $time_left = $time_in_hours . ' hour.';
+            $time_left = $time_in_hours . ' hour ' . $time_in_minutes . ' minutes.';
           }
           else {
-            $time_in_minuts = $time_diff % 3600;
-            $time_in_minuts = round(($time_in_minuts / 60), 0);
-            $time_left = $time_in_minuts . ' minutes.';
+            $time_in_secs = (int) (($time_diff % 3600) % 60);
+            if ($time_in_minutes > 1) {
+              $time_left = $time_in_minutes . ' minutes ' . $time_in_secs . ' seconds.';
+            }
+            elseif ($time_in_minutes == 1) {
+              $time_left = $time_in_minutes . ' minute ' . $time_in_secs . ' seconds.';
+            }
+            else {
+              $time_left = $time_in_secs . ' seconds.';
+              if ($time_in_secs == 1) {
+                $time_left = $time_in_secs . ' second.';
+              }
+            }
           }
-          form_set_error('name', t('This account has been deactivated or is blocked. Please try login after @time', array('@time' => $time_left)));
+          form_set_error('name', t('This account has been deactivated. Please try login after @time', array('@time' => $time_left)));
         }
       }
       else {
